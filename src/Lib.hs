@@ -55,6 +55,10 @@ instance Show Sound where
     show Lib.CB = show "Cowbell"
     show Lib.TM = show "Tambourine"
 
+-----------------
+---- Helpers ----
+-----------------
+
 readSound :: String -> Sound
 readSound xs = case xs of
     "AC" -> Lib.AC
