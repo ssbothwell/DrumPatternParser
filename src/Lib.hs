@@ -127,6 +127,3 @@ CH: o ooo o o o o o
 RS:    o  o     o
 BD: o       o o   o
 |]
-
-someFunc :: IO ()
-someFunc = putStrLn "someFunc"
