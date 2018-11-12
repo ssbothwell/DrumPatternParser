@@ -119,6 +119,10 @@ parsePattern = do
     return $ Pattern pName pSign tracks
     
 
+-------------------
+---- Test Data ----
+-------------------
+
 testPattern = [r|
 AfroCub1 4/4
 --------------------
