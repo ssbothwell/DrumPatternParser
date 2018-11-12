@@ -81,6 +81,13 @@ readNote x = case x of
     'x' -> X
     'o' -> O
 
+sigToEighths :: TimeSignature -> Int
+sigToEighths (TimeSignature num 8) = num
+sigToEighths (TimeSignature num denom)
+    | 8 `mod` denom /= 0 = 0
+    | denom < 8 = sigToEighths $ TimeSignature (num * 2) (denom * 2)
+    | denom > 8 = sigToEighths $ TimeSignature (num `div` 2) (denom `div` 2)
+
 -----------------
 ---- Parsers ----
 -----------------
@@ -105,29 +112,32 @@ parseNote = do
     note <- readNote <$> oneOf "xo "
     return note
     
-parseTrack :: Parser Track
-parseTrack = token $ do
+parseTrack :: Int -> Parser Track
+parseTrack i = token $ do
     sound <- parseSound
     string ": "
-    beat <- parseNote `manyTill` char '\n'
-    return $ Track sound beat
+    notes <- parseNote `manyTill` char '\n'
+    let pad = i - length notes
+    return $ Track sound (notes ++ replicate pad Rest)
 
-parseBeatCount :: Parser ()
-parseBeatCount = token $ do
+parseBeatCount :: Int -> Parser ()
+parseBeatCount i = token $ do
     char '#'
-    spaces
-    digit `manyTill` char '\n'
+    string "   "
+    sequence $ replicate i digit
+    char '\n'
     return ()
 
 parsePattern :: Parser Pattern
 parsePattern = token $ do
     spaces
     pName <- parsePatternName
-    pSign <- parseSignature
+    pSig <- parseSignature
     char '-' `manyTill` char '\n'
-    parseBeatCount
-    tracks <- some parseTrack
-    return $ Pattern pName pSign tracks
+    let eighths = 2 * sigToEighths pSig
+    parseBeatCount eighths
+    tracks <- some $ parseTrack eighths
+    return $ Pattern pName pSig tracks
     
 -------------------
 ---- Test Data ----
