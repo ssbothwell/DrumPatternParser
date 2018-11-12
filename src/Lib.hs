@@ -109,7 +109,7 @@ parseBeatCount = token $ do
     return ()
 
 parsePattern :: Parser Pattern
-parsePattern = do
+parsePattern = token $ do
     spaces
     pName <- parsePatternName
     pSign <- parseSignature
@@ -118,7 +118,6 @@ parsePattern = do
     tracks <- some parseTrack
     return $ Pattern pName pSign tracks
     
-
 -------------------
 ---- Test Data ----
 -------------------
