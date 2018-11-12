@@ -14,11 +14,11 @@ import Text.Trifecta
 ---------------
 
 type PatternName = String
-type Beat = String
-data TimeSignature = TimeSignature Int Int deriving (Eq, Show)
-data Track = Track Sound Beat deriving (Eq, Show)
+data TimeSignature = TimeSignature Int Int deriving Show
+data Note = Rest | X | O deriving Show
+data Track = Track Sound [Note] deriving Show
 
-data Pattern = Pattern PatternName TimeSignature [Track] deriving (Eq, Show)
+data Pattern = Pattern PatternName TimeSignature [Track] deriving Show
 
 data Sound
     = AC
@@ -75,6 +75,12 @@ readSound xs = case xs of
     "CB" -> Lib.CB
     "TM" -> Lib.TM
 
+readNote :: Char -> Note
+readNote x = case x of
+    ' ' -> Rest
+    'x' -> X
+    'o' -> O
+
 -----------------
 ---- Parsers ----
 -----------------
@@ -91,14 +97,19 @@ parseSignature = token $ do
 
 parseSound :: Parser Sound
 parseSound = token $ do
-    sound <- sequence [letter, letter]
-    return $ readSound sound
+    sound <- fmap readSound $ sequence [letter, letter]
+    return $ sound
 
+parseNote :: Parser Note
+parseNote = do
+    note <- readNote <$> oneOf "xo "
+    return note
+    
 parseTrack :: Parser Track
 parseTrack = token $ do
     sound <- parseSound
     string ": "
-    beat <- oneOf "xo " `manyTill` char '\n'
+    beat <- parseNote `manyTill` char '\n'
     return $ Track sound beat
 
 parseBeatCount :: Parser ()
