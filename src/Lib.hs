@@ -14,6 +14,7 @@ import Text.Trifecta
 ---------------
 
 type PatternName = String
+type Accent = Int
 data TimeSignature = TimeSignature Int Int deriving Show
 data Note = Rest | X | O deriving Show
 data Track = Track Sound [Note] deriving Show
@@ -88,6 +89,11 @@ sigToEighths (TimeSignature num denom)
     | denom < 8 = sigToEighths $ TimeSignature (num * 2) (denom * 2)
     | denom > 8 = sigToEighths $ TimeSignature (num `div` 2) (denom `div` 2)
 
+stringToAccents :: String -> [Accent]
+stringToAccents xs = map (\(c, a) -> a) $ f xs [] 0
+    where f [] ys i = ys
+          f (x:xs) ys i = f xs ((x, i):ys) (i+1)
+
 -----------------
 ---- Parsers ----
 -----------------
@@ -122,11 +128,17 @@ parseTrack i = token $ do
 
 parseBeatCount :: Int -> Parser ()
 parseBeatCount i = token $ do
-    char '#'
-    string "   "
+    string "#   "
     sequence $ replicate i digit
     char '\n'
     return ()
+
+parseAccents :: Int -> Parser [Accent]
+parseAccents i = token $ do
+    string "    "
+    accentString <- sequence . replicate i $ oneOf "* "
+    let accents = stringToAccents accentString
+    return accents
 
 parsePattern :: Parser Pattern
 parsePattern = token $ do
@@ -136,6 +148,7 @@ parsePattern = token $ do
     char '-' `manyTill` char '\n'
     let eighths = 2 * sigToEighths pSig
     parseBeatCount eighths
+    optional $ parseAccents eighths
     tracks <- some $ parseTrack eighths
     return $ Pattern pName pSig tracks
     
