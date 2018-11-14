@@ -14,12 +14,11 @@ import Text.Trifecta
 ---------------
 
 type PatternName = String
-type Accent = Int
 data TimeSignature = TimeSignature Int Int deriving Show
-data Note = Rest | X | O deriving Show
+data Note = Rest | X | O | Accent deriving Show
 data Track = Track Sound [Note] deriving Show
 
-data Pattern = Pattern PatternName TimeSignature [Track] deriving Show
+data Pattern = Pattern PatternName TimeSignature Track [Track] deriving Show
 
 data Sound
     = AC
@@ -81,6 +80,7 @@ readNote x = case x of
     ' ' -> Rest
     'x' -> X
     'o' -> O
+    '*' -> Accent
 
 sigToEighths :: TimeSignature -> Int
 sigToEighths (TimeSignature num 8) = num
@@ -89,10 +89,10 @@ sigToEighths (TimeSignature num denom)
     | denom < 8 = sigToEighths $ TimeSignature (num * 2) (denom * 2)
     | denom > 8 = sigToEighths $ TimeSignature (num `div` 2) (denom `div` 2)
 
-stringToAccents :: String -> [Accent]
-stringToAccents xs = map (\(c, a) -> a) $ f xs [] 0
+stringToAccents :: String -> [Note]
+stringToAccents xs = reverse $ f xs [] 0
     where f [] ys i = ys
-          f (x:xs) ys i = f xs ((x, i):ys) (i+1)
+          f (x:xs) ys i = f xs ((readNote x):ys) (i+1)
 
 -----------------
 ---- Parsers ----
@@ -126,19 +126,21 @@ parseTrack i = token $ do
     let pad = i - length notes
     return $ Track sound (notes ++ replicate pad Rest)
 
-parseBeatCount :: Int -> Parser ()
+parseBeatCount :: Int -> Parser [Note]
 parseBeatCount i = token $ do
     string "#   "
     sequence $ replicate i digit
     char '\n'
-    return ()
-
-parseAccents :: Int -> Parser [Accent]
-parseAccents i = token $ do
-    string "    "
-    accentString <- sequence . replicate i $ oneOf "* "
-    let accents = stringToAccents accentString
+    accents <- parseAccents i
     return accents
+    
+parseAccents :: Int -> Parser [Note]
+parseAccents i = do
+    string "    "
+    accentString <- oneOf "* " `manyTill` char '\n'
+    let accents = stringToAccents accentString
+    let pad = i - length accents
+    return $ accents ++ replicate pad Rest
 
 parsePattern :: Parser Pattern
 parsePattern = token $ do
@@ -147,10 +149,10 @@ parsePattern = token $ do
     pSig <- parseSignature
     char '-' `manyTill` char '\n'
     let eighths = 2 * sigToEighths pSig
-    parseBeatCount eighths
-    optional $ parseAccents eighths
+    accents <- parseBeatCount eighths
     tracks <- some $ parseTrack eighths
-    return $ Pattern pName pSig tracks
+    let accentTrack = Track Lib.AC accents
+    return $ Pattern pName pSig accentTrack tracks
     
 -------------------
 ---- Test Data ----
@@ -160,6 +162,7 @@ testPattern = [r|
 AfroCub1 4/4
 --------------------
 #   1234567890123456
+      *  *
 CH: o ooo o o o o o
 RS:    o  o     o
 BD: o       o o   o
