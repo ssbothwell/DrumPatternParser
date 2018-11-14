@@ -90,9 +90,8 @@ sigToEighths (TimeSignature num denom)
     | denom > 8 = sigToEighths $ TimeSignature (num `div` 2) (denom `div` 2)
 
 stringToAccents :: String -> [Note]
-stringToAccents xs = reverse $ f xs [] 0
-    where f [] ys i = ys
-          f (x:xs) ys i = f xs ((readNote x):ys) (i+1)
+stringToAccents xs = fst $ foldr f ([], 0) xs
+    where f a (b, i) = ((readNote a):b, i+1)
 
 -----------------
 ---- Parsers ----
